@@ -17,3 +17,6 @@ git add README.md
 git status
 git commit -m "Updatef Successfully"
 git push origin main 
+
+
+ansible all -m dnf -a "update_cashe=true"
