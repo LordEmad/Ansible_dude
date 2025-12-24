@@ -21,7 +21,7 @@ git push origin main
 
 ansible all -m dnf -a "update_cashe=true"
 
---------------------First Playbook----------------------
+                     --------------------First Playbook----------------------
 
 - hosts: all
   become: true
@@ -31,5 +31,7 @@ ansible all -m dnf -a "update_cashe=true"
        dnf:
           name: httpd
           state: present
+       
+       -------------------------------------Second Playbook----------------------
 
        
