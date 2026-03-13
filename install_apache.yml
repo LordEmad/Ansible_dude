@@ -2,8 +2,120 @@
   become: true
   tasks:
 
-    - name: install httpd package
+
+    - name: install updates (ubuntu)
+      tags: always
+      apt:
+        upgrade: yes
+        update_cache: yes
+      when: ansible_distribution == "Ubuntu"
+
+
+
+    - name: install updates (redhat)
+      tags: always
+      dnf:
+        update_only: yes
+        update_cache: yes
+      when: ansible_distribution == "RedHat"
+
+
+- hosts: all
+  become: true
+  tasks:
+ 
+    - name: create users
+      tags: always
+      user:
+        name: simone
+        groups: root
+        
+
+    - name: add ssh key for simone
+      tags: always
+      authorized_key:
+        user: simone
+        key:  "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCVrBJWppLQrMAaS3CyTmj73uQAsXhYtvnZ4kA4t0t78Feq4lIcF7CxnWTIiDL9pXcvAOZLp6dmtvVg0vaImG6Tvs/Rz/309NdmG7sEhCl7IS65F9L0nq6O8aPCO50naGUu8NQL2z0YMs87INUgil2NLwD1dZxg9UIVVdIuHn+HE2ikpVpxWfC3ChoGvX8TiQ4HMd6MF1PhOBSf304KKYziH0mD5JNMgPF8xSdB17FqHZKJ14wpRjVopqWA1g+ZaaUl1gBcKS5xqTUah/PmtvvkwwK0Ez5Fa7ttFQcxdtSBqjQTwc6Dm3LCxprwDYSiugYfnrzFQ2c/sxfyeCk/59jr9AuVZCesQ5HrxRnHxUtuA+JI2c9GfBP5y94CwZ8nXbYE6trWNYVwZz/LqFDQ2A7yhbkBhwJN/MAj/2BB6sbEvyDJbWZOxhhDGXFrlUghhrbrD5/4cmVJWD2CPXEv3iPP4noJXe1v+Kc4lpZW8Mk8SiRVHmwpBwh7fE8vZpoYCds= root@Emad
+"
+
+    - name: add sudoers file for simone
+      tags: always
+      copy:
+        content: "simone ALL=(ALL) NOPASSWD: ALL 
+
+          "
+        dest: /etc/sudoers.d/simone
+        owner: root
+        group: root
+        mode: '0440'
+
+- hosts: web_servers
+  become: true
+  tasks:
+
+    - name: install httpd package (redhat)
+      tags: apache,httpd
       dnf:
         name: httpd
         state: present
-      when: ansible_distribution == "RedHat"    
+      when: ansible_distribution == "RedHat"
+
+    - name: start and enable httpd (redhat)
+      tags: apache,httpd
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+      when: ansible_distribution == "RedHat"
+
+    - name: change email in httpd.conf
+      tags: apache,httpd
+      lineinfile:
+        path: /etc/httpd/conf/httpd.conf
+        regexp: '^ServerAdmin'
+        line: 'ServerAdmin somee@simee.net'
+        backup: yes
+      when: ansible_distribution == "RedHat"
+      register: httpd
+
+    - name: restart httpd
+      tags: apache,httpd
+      service:
+        name: httpd
+        state: restarted
+      when: httpd is defined and httpd.changed
+
+    - name: install apache2 package (ubuntu)
+      tags: apache,apache2
+      apt:
+        name: apache2
+        state: present
+      when: ansible_distribution == "Ubuntu"
+
+    - name: start and enable apache2 (ubuntu)
+      tags: apache,apache2
+      service:
+        name: apache2
+        state: started
+        enabled: yes
+      when: ansible_distribution == "Ubuntu"
+
+    - name: copy the html file to server
+      tags: apache,apache2,httpd
+      copy:
+        src: default_site.html
+        dest: /var/www/html/index.html
+        owner: root
+        group: root
+        mode: 0644
+
+- hosts: db_servers
+  become: true
+  tasks:
+
+    - name: install mariadb
+      tags: centos,db,mariadb
+      dnf:
+        name: mariadb
+        state: present
+      when: ansible_distribution == "RedHat"
